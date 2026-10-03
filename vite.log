@@ -1,0 +1,22 @@
+
+> typerush-client@1.0.0 dev
+> vite --host
+
+
+  [32m[1mVITE[22m v8.3.2[39m  [2mready in [0m[1m1993[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://172.29.64.1:[1m5173[22m/[39m    [2mvEthernet (WSL (Hyp…[22m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.56.1:[1m5173[22m/[39m   [2mEthernet 2[22m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.0.110:[1m5173[22m/[39m  [2mWi-Fi[22m
+[2m8:58:50 pm[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ResultsOverlay.tsx[22m
+[2m8:59:02 pm[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ResultsOverlay.tsx[22m
+[2m8:59:10 pm[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m9:58:19 pm[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/store/gameSlice.ts[22m
+[2m9:58:28 pm[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/store/gameSlice.ts[22m
+[2m9:58:38 pm[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/NameGate.tsx[22m
+[2m9:58:57 pm[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/NameGate.tsx[22m
+[2m9:59:18 pm[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/NameGate.tsx[22m
+[2m9:59:29 pm[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2m9:59:47 pm[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/NameGate.tsx[22m
+[2m9:59:54 pm[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/RoomPanel.tsx, /src/components/NameGate.tsx, /src/components/RaceArena.tsx, /src/components/TopBar.tsx, /src/components/ResultsOverlay.tsx[22m

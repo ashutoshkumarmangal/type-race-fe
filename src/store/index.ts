@@ -1,0 +1,19 @@
+import { configureStore } from '@reduxjs/toolkit';
+import { useDispatch, useSelector } from 'react-redux';
+import gameReducer from './gameSlice';
+import typingReducer from './typingSlice';
+import profileReducer from './profileSlice';
+
+export const store = configureStore({
+  reducer: {
+    game: gameReducer,
+    typing: typingReducer,
+    profile: profileReducer,
+  },
+});
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+
+export const useAppDispatch = useDispatch.withTypes<AppDispatch>();
+export const useAppSelector = useSelector.withTypes<RootState>();
