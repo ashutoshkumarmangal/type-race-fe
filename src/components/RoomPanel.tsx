@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { useAppSelector } from '../store';
 import { gameActions } from '../socket/bridge';
+import { apiUrl } from '../config';
 
 export function RoomPanel() {
   const room = useAppSelector((s) => s.game.room);
@@ -10,7 +11,7 @@ export function RoomPanel() {
 
   const createRoom = async () => {
     try {
-      const response = await fetch('/api/rooms/new');
+      const response = await fetch(apiUrl('/api/rooms/new'));
       const data = (await response.json()) as { roomCode: string };
       gameActions.joinRoom(data.roomCode);
     } catch {
