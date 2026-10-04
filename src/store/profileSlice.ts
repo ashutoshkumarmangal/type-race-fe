@@ -1,4 +1,5 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { apiUrl } from '../config';
 
 export interface LeaderboardEntry {
   rank: number;
@@ -51,7 +52,7 @@ const initialState: ProfileState = {
 };
 
 export const loadLeaderboard = createAsyncThunk('profile/loadLeaderboard', async () => {
-  const response = await fetch('/api/leaderboard?limit=20');
+  const response = await fetch(apiUrl('/api/leaderboard?limit=20'));
   if (!response.ok) {
     throw new Error(`leaderboard ${response.status}`);
   }
@@ -61,13 +62,17 @@ export const loadLeaderboard = createAsyncThunk('profile/loadLeaderboard', async
 export const loadProfile = createAsyncThunk(
   'profile/loadProfile',
   async (nickname: string) => {
-    const response = await fetch(`/api/players/${encodeURIComponent(nickname)}`);
+    const response = await fetch(apiUrl(`/api/players/${encodeURIComponent(nickname)}`));
     if (!response.ok) {
       return { stats: null, history: [] as RaceHistoryItem[] };
     }
     const stats = (await response.json()) as PlayerStats;
-    const historyResponse = await fetch(`/api/players/${encodeURIComponent(nickname)}/races?limit=8`);
-    const history = historyResponse.ok ? ((await historyResponse.json()) as RaceHistoryItem[]) : [];
+    const historyResponse = await fetch(
+      apiUrl(`/api/players/${encodeURIComponent(nickname)}/races?limit=8`),
+    );
+    const history = historyResponse.ok
+      ? ((await historyResponse.json()) as RaceHistoryItem[])
+      : [];
     return { stats, history };
   },
 );

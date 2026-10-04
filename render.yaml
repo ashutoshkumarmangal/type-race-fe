@@ -1,0 +1,23 @@
+# Render blueprint for the TypeRush frontend (static site).
+#
+# New > Blueprint > point Render at this repo. Then fill in VITE_API_BASE / VITE_WS_URL using the
+# URL of your deployed backend, e.g. https://typerush-backend.onrender.com
+#
+# These are BUILD-time variables: Vite inlines them into the bundle, so after changing them you must
+# re-deploy (Render does not rebuild on env change alone for static sites — use Manual Deploy).
+
+services:
+  - type: web
+    name: type-race-fe
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    pullRequestPreviewsEnabled: false
+    autoDeploy: true
+    envVars:
+      # No trailing slash. Leave empty to talk to the same origin (dev proxy / single-service deploy).
+      - key: VITE_API_BASE
+        sync: false
+      # e.g. wss://type-race-backend.onrender.com/ws/game
+      - key: VITE_WS_URL
+        sync: false

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../store';
 import { nicknameChanged } from '../store/gameSlice';
 import { connectSocket, gameActions, installProgressReporter } from '../socket/bridge';
+import { apiUrl } from '../config';
 
 const STORAGE_KEY = 'typerush.nickname';
 
@@ -41,7 +42,7 @@ export function NameGate() {
       return;
     }
     try {
-      const response = await fetch('/api/rooms/new');
+      const response = await fetch(apiUrl('/api/rooms/new'));
       const data = (await response.json()) as { roomCode: string };
       gameActions.joinRoom(data.roomCode);
     } catch {

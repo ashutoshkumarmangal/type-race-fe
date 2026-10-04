@@ -1,4 +1,5 @@
 import type { ClientCommand, Envelope } from '../types/protocol';
+import { gameSocketUrl } from '../config';
 
 type Handler = (type: string, data: unknown) => void;
 type StatusHandler = (status: SocketStatus) => void;
@@ -20,8 +21,7 @@ export class GameSocket {
   private nickname = 'Racer';
 
   constructor(url?: string) {
-    const fallback = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/game`;
-    this.url = url ?? (import.meta.env.VITE_WS_URL as string | undefined) ?? fallback;
+    this.url = url ?? gameSocketUrl();
   }
 
   connect(nickname: string): void {
