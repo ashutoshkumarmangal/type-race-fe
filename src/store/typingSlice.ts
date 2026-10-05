@@ -11,8 +11,15 @@ export interface TypingState {
   correctChars: number;
   errors: number;
   keystrokes: number;
-  /** Indexes of characters typed incorrectly, so the UI can highlight them. */
-  wrongIndexes: number[];
+  /**
+   * Index the cursor is parked on because the player typed the wrong character. The cursor
+   * refuses to advance while this is set, so the racer has to correct it before moving on.
+   */
+  stuckAtIndex: number | null;
+  /** Increments on every wrong keystroke; drives the car braking animation. */
+  brakeCount: number;
+  /** Timestamp of the most recent wrong keystroke, used to flash the brake glow. */
+  lastErrorAtMs: number;
   startedAtMs: number;
   finishedAtMs: number;
   submitted: boolean;
@@ -26,7 +33,9 @@ const initialState: TypingState = {
   correctChars: 0,
   errors: 0,
   keystrokes: 0,
-  wrongIndexes: [],
+  stuckAtIndex: null,
+  brakeCount: 0,
+  lastErrorAtMs: 0,
   startedAtMs: 0,
   finishedAtMs: 0,
   submitted: false,
@@ -44,7 +53,9 @@ const typingSlice = createSlice({
       state.correctChars = 0;
       state.errors = 0;
       state.keystrokes = 0;
-      state.wrongIndexes = [];
+      state.stuckAtIndex = null;
+      state.brakeCount = 0;
+      state.lastErrorAtMs = 0;
       state.startedAtMs = 0;
       state.finishedAtMs = 0;
       state.submitted = false;
@@ -53,7 +64,11 @@ const typingSlice = createSlice({
     lockRace(state) {
       state.locked = true;
     },
-    /** One keystroke that advances the cursor. */
+    /**
+     * One keystroke. A correct character advances the cursor and the car; a wrong character
+     * brakes the car (error counted, no forward progress) and parks the cursor on the offending
+     * index until the racer types it correctly.
+     */
     charTyped(state, action: PayloadAction<{ char: string; correct: boolean }>) {
       if (state.locked || state.submitted) {
         return;
@@ -61,14 +76,17 @@ const typingSlice = createSlice({
       if (state.startedAtMs === 0) {
         state.startedAtMs = Date.now();
       }
-      state.typedCount += 1;
       state.keystrokes += 1;
-      if (action.payload.correct) {
-        state.correctChars += 1;
-      } else {
+      if (!action.payload.correct) {
         state.errors += 1;
-        state.wrongIndexes.push(state.typedCount - 1);
+        state.brakeCount += 1;
+        state.lastErrorAtMs = Date.now();
+        state.stuckAtIndex = state.typedCount;
+        return;
       }
+      state.typedCount += 1;
+      state.correctChars += 1;
+      state.stuckAtIndex = null;
       if (state.typedCount >= state.totalChars) {
         state.submitted = true;
         state.finishedAtMs = Date.now();

@@ -3,7 +3,7 @@ import { useAppDispatch, useAppSelector } from '../store';
 import { charTyped, localAccuracy, localWpm } from '../store/typingSlice';
 import { gameActions, resetProgressReporter } from '../socket/bridge';
 import { RaceHud } from './RaceHud';
-import { PlayerProgress } from './PlayerProgress';
+import { RaceTrack } from './RaceTrack';
 import { CountdownOverlay } from './CountdownOverlay';
 import { ResultsOverlay } from './ResultsOverlay';
 
@@ -16,16 +16,18 @@ export function RaceArena() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [wordAt, setWordAt] = useState<Set<number>>(new Set());
   const [wordIndexAt, setWordIndexAt] = useState<Map<number, number>>(new Map());
+  const [braking, setBraking] = useState(false);
 
   const phase = game.room?.phase ?? 'LOBBY';
   const racers = useMemo(() => game.live?.players ?? [], [game.live]);
-  const youId = game.me?.playerId;
+  const youId = game.me?.playerId ?? '';
 
   const canType = phase === 'RACING' && !typing.submitted && !typing.locked;
 
   /**
-   * A single keystroke always advances the cursor. A wrong character is recorded as an error and
-   * highlighted, which keeps the local buffer trivially in sync with the server's counters.
+   * A correct character advances the cursor and the car. A wrong character brakes: it is counted
+   * as an error, the car does not move, and the cursor parks on the offending index until the
+   * racer types it correctly.
    */
   const handleInput = (value: string) => {
     if (!canType || value.length === 0) {
@@ -48,7 +50,18 @@ export function RaceArena() {
 
   useEffect(() => {
     resetProgressReporter();
+    setBraking(false);
   }, [game.race?.raceId]);
+
+  // Flash the brake glow for a moment after each wrong keystroke.
+  useEffect(() => {
+    if (typing.brakeCount === 0 || typing.lastErrorAtMs === 0) {
+      return;
+    }
+    setBraking(true);
+    const timer = window.setTimeout(() => setBraking(false), 260);
+    return () => window.clearTimeout(timer);
+  }, [typing.brakeCount, typing.lastErrorAtMs]);
 
   // Word boundaries let the text render in alternating accent colours.
   useEffect(() => {
@@ -87,23 +100,12 @@ export function RaceArena() {
         timeLimitMs={game.race?.timeLimitMs ?? 0}
       />
 
-      <div className="track">
-        {racers
-          .slice()
-          .sort((a, b) => b.progress - a.progress)
-          .map((player) => (
-            <PlayerProgress
-              key={player.id}
-              nickname={player.nickname}
-              color={player.avatarColor}
-              progress={player.id === youId ? Math.max(player.progress, progress) : player.progress}
-              wpm={player.id === youId ? Math.max(player.wpm, wpm) : player.wpm}
-              accuracy={player.accuracy}
-              finished={player.finished}
-              you={player.id === youId}
-            />
-          ))}
-      </div>
+      <RaceTrack
+        racers={racers}
+        youId={youId}
+        localProgress={progress}
+        localBraking={braking}
+      />
 
       <div className={`text-shell phase-${phase.toLowerCase()}`}>
         <div className="race-text" onClick={() => canType && inputRef.current?.focus()}>
@@ -113,7 +115,7 @@ export function RaceArena() {
               char={char}
               index={index}
               typedCount={typing.typedCount}
-              wrongIndexes={typing.wrongIndexes}
+              stuckIndex={typing.stuckAtIndex}
               wordStart={wordAt.has(index)}
               wordIndex={wordIndexAt.get(index) ?? 0}
             />
@@ -192,14 +194,14 @@ const Char = ({
   char,
   index,
   typedCount,
-  wrongIndexes,
+  stuckIndex,
   wordStart,
   wordIndex,
 }: {
   char: string;
   index: number;
   typedCount: number;
-  wrongIndexes: number[];
+  stuckIndex: number | null;
   wordStart: boolean;
   wordIndex: number;
 }) => {
@@ -210,10 +212,11 @@ const Char = ({
   if (wordStart) {
     cls += ` w${wordIndex % WORD_COLORS.length}`;
   }
-  if (index < typedCount) {
-    cls += wrongIndexes.includes(index) ? ' char-wrong' : ' char-typed';
-  }
-  if (index === typedCount) {
+  if (index === stuckIndex) {
+    cls += ' char-wrong char-cursor';
+  } else if (index < typedCount) {
+    cls += ' char-typed';
+  } else if (index === typedCount) {
     cls += ' char-cursor';
   }
   if (index > typedCount + 90) {
