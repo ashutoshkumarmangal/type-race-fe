@@ -1,21 +1,30 @@
 import { useRef } from 'react';
 import { useAppSelector } from '../store';
+import { errorRaised } from '../store/gameSlice';
+import { useAppDispatch } from '../store';
 import { gameActions } from '../socket/bridge';
-import { apiUrl } from '../config';
+import { apiGet, ApiError } from '../api/client';
 
 export function RoomPanel() {
+  const dispatch = useAppDispatch();
   const room = useAppSelector((s) => s.game.room);
   const me = useAppSelector((s) => s.game.me);
   const queue = useAppSelector((s) => s.game.queue);
   const codeRef = useRef<HTMLInputElement>(null);
 
+  // Room creation is behind auth now, so the code has to come from the server. The old fallback of
+  // inventing a code client-side would join a room that does not exist.
   const createRoom = async () => {
     try {
-      const response = await fetch(apiUrl('/api/rooms/new'));
-      const data = (await response.json()) as { roomCode: string };
+      const data = await apiGet<{ roomCode: string }>('/api/rooms/new');
       gameActions.joinRoom(data.roomCode);
-    } catch {
-      gameActions.joinRoom(randomCode());
+    } catch (error) {
+      dispatch(
+        errorRaised({
+          code: error instanceof ApiError ? error.code : 'room_create_failed',
+          message: error instanceof Error ? error.message : 'Could not create a room.',
+        }),
+      );
     }
   };
 
@@ -103,11 +112,3 @@ export function RoomPanel() {
   );
 }
 
-function randomCode(): string {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
-  for (let i = 0; i < 5; i += 1) {
-    code += alphabet[Math.floor(Math.random() * alphabet.length)];
-  }
-  return code;
-}

@@ -3,9 +3,11 @@ import { useDispatch, useSelector } from 'react-redux';
 import gameReducer from './gameSlice';
 import typingReducer from './typingSlice';
 import profileReducer from './profileSlice';
+import authReducer from './authSlice';
 
 export const store = configureStore({
   reducer: {
+    auth: authReducer,
     game: gameReducer,
     typing: typingReducer,
     profile: profileReducer,

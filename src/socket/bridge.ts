@@ -1,31 +1,16 @@
 import { gameSocket, type SocketStatus } from './GameSocket';
 import { store } from '../store';
 import {
-  connectionChanged,
-  countdownTick,
-  errorRaised,
-  playerFinished,
-  queueUpdated,
-  raceOver,
-  raceStarted,
-  raceStateReceived,
-  roomClosed,
-  roomJoined,
-  socketLost,
-  welcomed,
+  connectionChanged, countdownTick, errorRaised, playerFinished, queueUpdated,
+  raceOver, raceStarted, raceStateReceived, roomClosed, roomJoined,
+  socketLost, welcomed,
 } from '../store/gameSlice';
 import { raceTextLoaded, raceSubmitted } from '../store/typingSlice';
 import { loadProfile } from '../store/profileSlice';
+import { getAccessToken } from '../api/session';
 import type {
-  ClientCommand,
-  Joined,
-  PlayerFinished as PlayerFinishedPayload,
-  Queued,
-  RaceOver as RaceOverPayload,
-  RaceStart,
-  RaceState,
-  ServerError,
-  Welcome,
+  ClientCommand, Joined, PlayerFinished as PlayerFinishedPayload, Queued,
+  RaceOver as RaceOverPayload, RaceStart, RaceState, ServerError, Welcome,
 } from '../types/protocol';
 
 const PROGRESS_INTERVAL_MS = 100;
@@ -34,10 +19,15 @@ export function sendCommand(command: ClientCommand): void {
   gameSocket.send(command);
 }
 
-/** Opens the socket (and keeps it open across reconnects) for the given racer name. */
-export function connectSocket(nickname: string): void {
-  gameSocket.setHandlers(handleMessage, handleStatus);
-  gameSocket.connect(nickname);
+/**
+ * Opens the socket (and keeps it open across reconnects) for the signed-in account.
+ *
+ * <p>The token is read through a provider rather than captured, because reconnect attempts can happen
+ * long after the token that started the session has expired and been replaced.
+ */
+export function connectSocket(): void {
+  gameSocket.setHandlers(handleMessage, handleStatus, handleRefusal);
+  gameSocket.connect(getAccessToken);
 }
 
 function handleStatus(status: SocketStatus): void {
@@ -45,6 +35,11 @@ function handleStatus(status: SocketStatus): void {
   if (status === 'closed') {
     store.dispatch(socketLost());
   }
+}
+
+/** The server accepted the upgrade but refused the player; retrying will not help. */
+function handleRefusal(reason: string): void {
+  store.dispatch(errorRaised({ code: 'socket_refused', message: reason }));
 }
 
 function handleMessage(type: string, data: unknown): void {
@@ -86,12 +81,8 @@ function handleMessage(type: string, data: unknown): void {
       const payload = data as RaceOverPayload;
       store.dispatch(raceOver(payload));
       store.dispatch(raceSubmitted());
-      const { game } = store.getState();
-      // Prefer the server-sanitised nickname so stats always match what was recorded.
-      const nickname = game.me?.nickname ?? game.nickname;
-      if (nickname) {
-        store.dispatch(loadProfile(nickname));
-      }
+      // The account is the scope for personal stats, so no nickname has to be threaded through here.
+      store.dispatch(loadProfile());
       break;
     }
     case 'error':
@@ -124,30 +115,16 @@ function driveCountdown(startAtEpochMs: number): void {
 // ---------------------------------------------------------------- outbound helpers used by the UI
 
 export const gameActions = {
-  quickMatch(): void {
-    sendCommand({ type: 'join_quick' });
-  },
+  quickMatch(): void { sendCommand({ type: 'join_quick' }); },
   joinRoom(roomCode: string): void {
     sendCommand({ type: 'join_room', roomCode: roomCode.trim().toUpperCase() });
   },
-  setReady(ready: boolean): void {
-    sendCommand({ type: 'ready', ready });
-  },
-  startRace(): void {
-    sendCommand({ type: 'start' });
-  },
-  leaveRoom(): void {
-    sendCommand({ type: 'leave' });
-  },
-  requestRematch(): void {
-    sendCommand({ type: 'rematch', again: true });
-  },
-  cancelRematch(): void {
-    sendCommand({ type: 'rematch', again: false });
-  },
-  ping(): void {
-    sendCommand({ type: 'ping' });
-  },
+  setReady(ready: boolean): void { sendCommand({ type: 'ready', ready }); },
+  startRace(): void { sendCommand({ type: 'start' }); },
+  leaveRoom(): void { sendCommand({ type: 'leave' }); },
+  requestRematch(): void { sendCommand({ type: 'rematch', again: true }); },
+  cancelRematch(): void { sendCommand({ type: 'rematch', again: false }); },
+  ping(): void { sendCommand({ type: 'ping' }); },
 };
 
 // ---------------------------------------------------------------- progress reporting
@@ -162,40 +139,22 @@ let subscribed = false;
  * exactly once when the last character lands.
  */
 export function installProgressReporter(): void {
-  if (subscribed) {
-    return;
-  }
+  if (subscribed) { return; }
   subscribed = true;
   store.subscribe(() => {
     const { typing, game } = store.getState();
-    if (!game.race || game.room?.phase !== 'RACING') {
-      return;
-    }
-    if (typing.keystrokes === 0) {
-      return;
-    }
+    if (!game.race || game.room?.phase !== 'RACING') { return; }
+    if (typing.keystrokes === 0) { return; }
     const now = Date.now();
     const changed = typing.correctChars !== lastSentCorrect || typing.errors !== lastSentErrors;
     const finished = typing.submitted;
-    if (!finished && (!changed || now - lastProgressSentAt < PROGRESS_INTERVAL_MS)) {
-      return;
-    }
+    if (!finished && (!changed || now - lastProgressSentAt < PROGRESS_INTERVAL_MS)) { return; }
     lastProgressSentAt = now;
     lastSentCorrect = typing.correctChars;
     lastSentErrors = typing.errors;
-    sendCommand({
-      type: 'progress',
-      correctChars: typing.correctChars,
-      errors: typing.errors,
-      keystrokes: typing.keystrokes,
-    });
+    sendCommand({ type: 'progress', correctChars: typing.correctChars, errors: typing.errors, keystrokes: typing.keystrokes });
     if (finished) {
-      sendCommand({
-        type: 'finish',
-        correctChars: typing.correctChars,
-        errors: typing.errors,
-        keystrokes: typing.keystrokes,
-      });
+      sendCommand({ type: 'finish', correctChars: typing.correctChars, errors: typing.errors, keystrokes: typing.keystrokes });
     }
   });
 }

@@ -6,13 +6,12 @@ import { loadProfile } from '../store/profileSlice';
 export function StatsPanel() {
   const dispatch = useAppDispatch();
   const me = useAppSelector((s) => s.game.me);
-  const { stats, history } = useAppSelector((s) => s.profile);
+  const { stats, history, error } = useAppSelector((s) => s.profile);
 
   useEffect(() => {
-    if (me?.nickname) {
-      dispatch(loadProfile(me.nickname));
-    }
-  }, [dispatch, me?.nickname]);
+    // No nickname to pass: the server scopes this to the bearer token's account.
+    dispatch(loadProfile());
+  }, [dispatch]);
 
   if (!me) {
     return null;
@@ -24,7 +23,8 @@ export function StatsPanel() {
         {me.nickname}
         <span className="dot inline" style={{ background: me.avatarColor }} />
       </h3>
-      {!stats && <p className="hint">No stats yet — finish a race.</p>}
+      {error && <p className="hint">{error}</p>}
+      {!stats && !error && <p className="hint">No stats yet — finish a race.</p>}
       {stats && (
         <>
           <div className="stat-grid">

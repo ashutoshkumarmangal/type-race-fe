@@ -116,7 +116,6 @@ export interface Envelope<T> {
 }
 
 export type ClientCommand =
-  | { type: 'hello'; nickname: string }
   | { type: 'join_quick' }
   | { type: 'join_room'; roomCode: string }
   | { type: 'ready'; ready: boolean }

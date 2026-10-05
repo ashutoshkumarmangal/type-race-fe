@@ -5,11 +5,14 @@ import { gameActions } from '../socket/bridge';
 export function TopBar({
   tab,
   onTabChange,
+  onSignOut,
 }: {
   tab: 'race' | 'leaderboard' | 'stats';
   onTabChange: (tab: 'race' | 'leaderboard' | 'stats') => void;
+  onSignOut: () => void;
 }) {
   const game = useAppSelector((s) => s.game);
+  const account = useAppSelector((s) => s.auth.account);
   const queue = game.queue;
   const [copied, setCopied] = useState(false);
 
@@ -66,6 +69,11 @@ export function TopBar({
             searching… {queue.queued}/{queue.needed}
           </span>
         ) : null}
+        {account && (
+          <button className="btn ghost" onClick={onSignOut} title={`Signed in as ${account.username}`}>
+            {account.nickname} · sign out
+          </button>
+        )}
       </div>
     </header>
   );

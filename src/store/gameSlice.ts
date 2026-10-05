@@ -19,9 +19,12 @@ export interface Me {
 
 export interface GameState {
   connection: SocketStatus;
-  /** Draft text in the name field. Typing here must never navigate away. */
-  nickname: string;
-  /** True once the racer has confirmed a name and the socket has opened at least once. */
+  /**
+   * True once the server has admitted this connection with a welcome.
+   *
+   * <p>Not on socket open: the server completes the upgrade before it checks the per-account socket
+   * cap, so an open socket can still be refused a moment later.
+   */
   sessionStarted: boolean;
   me: Me | null;
   queue: Queued | null;
@@ -38,7 +41,6 @@ export interface GameState {
 
 const initialState: GameState = {
   connection: 'closed',
-  nickname: '',
   sessionStarted: false,
   me: null,
   queue: null,
@@ -59,17 +61,13 @@ const gameSlice = createSlice({
   name: 'game',
   initialState,
   reducers: {
-    nicknameChanged(state, action: PayloadAction<string>) {
-      state.nickname = action.payload;
-    },
     connectionChanged(state, action: PayloadAction<SocketStatus>) {
       state.connection = action.payload;
-      if (action.payload === 'open') {
-        // Latches so a later socket drop shows the reconnect badge instead of the name gate.
-        state.sessionStarted = true;
-      }
     },
     welcomed(state, action: PayloadAction<Welcome>) {
+      // Latched here rather than on open: the welcome only arrives for an admitted connection, and
+      // it keeps a later socket drop showing the reconnect badge instead of the sign-in gate.
+      state.sessionStarted = true;
       state.me = {
         playerId: action.payload.playerId,
         nickname: action.payload.nickname,
@@ -140,7 +138,6 @@ const gameSlice = createSlice({
 });
 
 export const {
-  nicknameChanged,
   connectionChanged,
   welcomed,
   queueUpdated,
