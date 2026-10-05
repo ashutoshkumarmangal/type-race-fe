@@ -13,9 +13,11 @@ export function ResultsOverlay() {
   }
   const standings = results.standings
     .slice()
-    .sort((a, b) => (a.place || 99) - (b.place || 99) || b.wpm - a.wpm);
+    .sort((a, b) => (a.place || 99) - (b.place || 99) || b.wpm - a.wpm || b.accuracy - a.accuracy);
   const mine = standings.find((s) => s.id === me?.playerId);
-  const youWon = mine?.place === 1;
+  const youWon = mine?.place === 1 && !mine.dnf;
+  // A solo run still gets full scoring, but calling it a win over nobody reads oddly.
+  const solo = standings.filter((s) => !s.dnf).length <= 1;
   const personalBest = stats && mine ? mine.wpm >= stats.bestWpm && !mine.dnf : false;
 
   return (
@@ -25,7 +27,7 @@ export function ResultsOverlay() {
           <div>
             <p className="eyebrow">race {results.raceId}</p>
             <h2>
-              {youWon ? 'You won the race' : mine?.dnf ? 'Race over' : 'Race complete'}
+              {mine?.dnf ? 'Race over' : solo ? 'Race complete' : youWon ? 'You won the race' : 'Race complete'}
             </h2>
           </div>
           <div className="results-actions">
@@ -38,20 +40,21 @@ export function ResultsOverlay() {
               </button>
             )}
             <button className="btn ghost" onClick={() => gameActions.leaveRoom()}>
-              Leave
+              Back to home
             </button>
           </div>
         </header>
 
         {mine && (
           <div className="result-cards">
-            <ResultCard label="Place" value={mine.dnf ? 'DNF' : `#${mine.place}`} />
+            <ResultCard label="Place" value={mine.dnf ? 'DNF' : `#${mine.place}`} highlight={youWon && !solo} />
             <ResultCard label="Speed" value={`${mine.wpm.toFixed(1)} wpm`} highlight={youWon} />
             <ResultCard label="Accuracy" value={`${mine.accuracy.toFixed(1)}%`} />
             <ResultCard
               label="Time"
               value={mine.dnf ? '—' : `${(mine.durationMs / 1000).toFixed(2)}s`}
             />
+            <ResultCard label="Errors" value={String(mine.errors)} />
             {personalBest && <ResultCard label="Personal best" value="new PB" highlight />}
           </div>
         )}

@@ -5,7 +5,7 @@ import {
   raceOver, raceStarted, raceStateReceived, roomClosed, roomJoined,
   socketLost, welcomed,
 } from '../store/gameSlice';
-import { raceTextLoaded, raceSubmitted } from '../store/typingSlice';
+import { raceTextLoaded, raceSubmitted, typingReset } from '../store/typingSlice';
 import { loadProfile } from '../store/profileSlice';
 import { getAccessToken } from '../api/session';
 import type {
@@ -58,6 +58,9 @@ function handleMessage(type: string, data: unknown): void {
       break;
     case 'room_closed':
       store.dispatch(roomClosed());
+      // Clear the race buffer too, so a player who leaves mid-race lands on a clean home screen
+      // instead of the previous text with a stale cursor.
+      store.dispatch(typingReset());
       break;
     case 'countdown': {
       const payload = data as { startsAtEpochMs: number };
