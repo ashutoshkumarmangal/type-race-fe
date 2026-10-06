@@ -6,6 +6,7 @@ import { RaceHud } from './RaceHud';
 import { RaceTrack } from './RaceTrack';
 import { CountdownOverlay } from './CountdownOverlay';
 import { ResultsOverlay } from './ResultsOverlay';
+import { FinishedBanner } from './FinishedBanner';
 
 const WORD_COLORS = ['var(--accent)', 'var(--accent-2)', 'var(--accent-3)'];
 
@@ -153,6 +154,7 @@ export function RaceArena() {
       </div>
 
       <CountdownOverlay seconds={game.countdownSeconds} phase={phase} />
+      {!game.results && <FinishedBanner />}
       {game.results && <ResultsOverlay />}
     </section>
   );

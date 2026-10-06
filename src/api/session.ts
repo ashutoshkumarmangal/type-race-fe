@@ -2,8 +2,9 @@
  * Token custody for the browser.
  *
  * <p>The split follows what the backend is built to expect: the refresh token is long lived and
- * survives a reload, so it goes to `localStorage`; the access token is short lived and lives only in
- * a module variable. An XSS that steals the access token gains minutes, not weeks.
+ * survives a reload, so it goes to `localStorage` along with the profile fields needed to render a
+ * signed-in shell. The access token is short lived and lives only in a module variable, so it is
+ * never written to storage at all. An XSS that steals the access token gains minutes, not weeks.
  *
  * <p>Refresh is single-flight on purpose. The backend rotates refresh tokens and treats a replayed
  * one as theft, revoking the entire family. Two in-flight calls to `/api/me/...` that each saw a
@@ -26,21 +27,24 @@ export interface AuthSession {
   expiresIn: number;
 }
 
+/**
+ * The durable half of a session: what survives a reload.
+ *
+ * <p>Deliberately carries no credential that can authorize a request on its own — the refresh
+ * token is the only way to mint an access token, and it is single-use.
+ */
 interface StoredSession {
-  accessToken: string;
   refreshToken: string;
   username: string;
   nickname: string;
   role: string;
-  /** Epoch ms at which the access token stops being usable. */
-  accessExpiresAt: number;
 }
 
 /** Access token in memory only. Never written to storage. */
 let accessToken: string | null = null;
 let accessExpiresAt = 0;
 
-let inFlightRefresh: Promise<StoredSession> | null = null;
+let inFlightRefresh: Promise<void> | null = null;
 
 type Listener = () => void;
 const listeners = new Set<Listener>();
@@ -61,8 +65,23 @@ function readStored(): StoredSession | null {
     return null;
   }
   try {
-    const parsed = JSON.parse(raw) as StoredSession;
-    return parsed && typeof parsed.refreshToken === 'string' ? parsed : null;
+    const parsed = JSON.parse(raw) as Record<string, unknown> & { refreshToken?: unknown };
+    if (!parsed || typeof parsed.refreshToken !== 'string') {
+      localStorage.removeItem(REFRESH_KEY);
+      return null;
+    }
+    const session: StoredSession = {
+      refreshToken: parsed.refreshToken,
+      username: typeof parsed.username === 'string' ? parsed.username : '',
+      nickname: typeof parsed.nickname === 'string' ? parsed.nickname : '',
+      role: typeof parsed.role === 'string' ? parsed.role : 'PLAYER',
+    };
+    // Older builds serialized the access token into this record. Re-keying it removes that
+    // credential from disk immediately, rather than waiting for the next sign-in to overwrite it.
+    if ('accessToken' in parsed || 'accessExpiresAt' in parsed) {
+      localStorage.setItem(REFRESH_KEY, JSON.stringify(session));
+    }
+    return session;
   } catch {
     localStorage.removeItem(REFRESH_KEY);
     return null;
@@ -87,17 +106,14 @@ export function hasStoredSession(): boolean {
 }
 
 export function setSession(session: AuthSession): void {
-  const stored: StoredSession = {
-    accessToken: session.accessToken,
+  accessToken = session.accessToken;
+  accessExpiresAt = Date.now() + session.expiresIn * 1000;
+  writeStored({
     refreshToken: session.refreshToken,
     username: session.username,
     nickname: session.nickname,
     role: session.role,
-    accessExpiresAt: Date.now() + session.expiresIn * 1000,
-  };
-  accessToken = stored.accessToken;
-  accessExpiresAt = stored.accessExpiresAt;
-  writeStored(stored);
+  });
   emit();
 }
 
@@ -132,7 +148,7 @@ export function accessTokenExpired(skewMs = REFRESH_SKEW_MS): boolean {
  * <p>Concurrent callers share one request. A failed refresh clears the session, because a refresh
  * token the server will not honour is not worth keeping.
  */
-export async function refreshSession(): Promise<StoredSession> {
+export async function refreshSession(): Promise<void> {
   if (inFlightRefresh) {
     return inFlightRefresh;
   }
@@ -153,14 +169,6 @@ export async function refreshSession(): Promise<StoredSession> {
     }
     const body = (await response.json()) as AuthSession;
     setSession(body);
-    return {
-      accessToken: body.accessToken,
-      refreshToken: body.refreshToken,
-      username: body.username,
-      nickname: body.nickname,
-      role: body.role,
-      accessExpiresAt: Date.now() + body.expiresIn * 1000,
-    };
   })();
 
   try {

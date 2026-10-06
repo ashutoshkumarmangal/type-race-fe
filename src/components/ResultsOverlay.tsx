@@ -109,7 +109,7 @@ export function ResultsOverlay() {
   );
 }
 
-function ResultCard({
+export function ResultCard({
   label,
   value,
   highlight,

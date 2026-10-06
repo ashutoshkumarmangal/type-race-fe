@@ -33,6 +33,11 @@ export interface GameState {
   live: RaceState | null;
   countdownSeconds: number;
   serverClockOffsetMs: number;
+  /**
+   * This player's own result the moment it is official, so they are not left staring at the text
+   * until the last racer finishes. Null once the full standings arrive.
+   */
+  personalFinish: PlayerFinished | null;
   finishFeed: PlayerFinished[];
   results: RaceOver | null;
   rematchVote: boolean;
@@ -49,6 +54,7 @@ const initialState: GameState = {
   live: null,
   countdownSeconds: 0,
   serverClockOffsetMs: 0,
+  personalFinish: null,
   finishFeed: [],
   results: null,
   rematchVote: false,
@@ -85,6 +91,7 @@ const gameSlice = createSlice({
       if (previousCode !== action.payload.roomCode) {
         state.live = null;
         state.results = null;
+        state.personalFinish = null;
         state.finishFeed = [];
         state.race = null;
         state.rematchVote = false;
@@ -95,6 +102,7 @@ const gameSlice = createSlice({
       state.race = null;
       state.live = null;
       state.results = null;
+      state.personalFinish = null;
       state.queue = null;
       state.finishFeed = [];
       state.rematchVote = false;
@@ -102,6 +110,7 @@ const gameSlice = createSlice({
     raceStarted(state, action: PayloadAction<RaceStart>) {
       state.race = action.payload;
       state.results = null;
+      state.personalFinish = null;
       state.finishFeed = [];
       state.rematchVote = false;
     },
@@ -115,9 +124,15 @@ const gameSlice = createSlice({
     playerFinished(state, action: PayloadAction<PlayerFinished>) {
       state.finishFeed.unshift(action.payload);
       state.finishFeed = state.finishFeed.slice(0, 6);
+      // The moment my own finish is official it becomes a personal result card; the full standings
+      // need the whole field, so they have to wait for race_over.
+      if (action.payload.id === state.me?.playerId) {
+        state.personalFinish = action.payload;
+      }
     },
     raceOver(state, action: PayloadAction<RaceOver>) {
       state.results = action.payload;
+      state.personalFinish = null;
     },
     rematchVoteSet(state, action: PayloadAction<boolean>) {
       state.rematchVote = action.payload;
