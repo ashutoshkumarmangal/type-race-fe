@@ -2,7 +2,6 @@ export function RaceHud({
   phase,
   elapsedMs,
   wpm,
-  serverWpm,
   accuracy,
   progress,
   timeLimitMs,
@@ -10,7 +9,6 @@ export function RaceHud({
   phase: string;
   elapsedMs: number;
   wpm: number;
-  serverWpm: number;
   accuracy: number;
   progress: number;
   timeLimitMs: number;
@@ -39,12 +37,6 @@ export function RaceHud({
           {phase === 'RACING' ? 'in the race' : phase.toLowerCase()}
         </span>
       </div>
-      {serverWpm > 0 && serverWpm !== wpm && (
-        <div className="hud-stat hud-server">
-          <span className="hud-value">{serverWpm.toFixed(0)}</span>
-          <span className="hud-label">server wpm</span>
-        </div>
-      )}
     </div>
   );
 }

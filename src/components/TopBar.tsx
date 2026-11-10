@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppSelector } from '../store';
 import { gameActions } from '../socket/bridge';
+import { soundEngine } from '../audio/soundEngine';
 
 export function TopBar({
   tab,
@@ -15,6 +16,14 @@ export function TopBar({
   const account = useAppSelector((s) => s.auth.account);
   const queue = game.queue;
   const [copied, setCopied] = useState(false);
+  const [muted, setMuted] = useState(() => soundEngine.getMuted());
+
+  useEffect(() => {
+    const unsubscribe = soundEngine.subscribe(setMuted);
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const copyCode = async () => {
     if (!game.room) return;
@@ -55,6 +64,14 @@ export function TopBar({
       </nav>
 
       <div className="topbar-right">
+        <button
+          className={`btn tiny ${muted ? 'ghost' : 'btn-active'}`}
+          onClick={() => soundEngine.toggleMute()}
+          title={muted ? 'Unmute race music & sounds' : 'Mute sound'}
+          aria-label={muted ? 'Unmute sound' : 'Mute sound'}
+        >
+          {muted ? '🔇 Sound' : '🔊 Sound'}
+        </button>
         {game.room ? (
           <>
             <button className="code-chip" onClick={copyCode} title="Copy room code">

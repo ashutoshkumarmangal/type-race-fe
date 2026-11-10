@@ -50,7 +50,7 @@ export function AuthGate() {
               autoComplete="username"
               autoCapitalize="none"
               spellCheck={false}
-              placeholder="3–20 characters"
+              placeholder="Username"
               onChange={(event) => setUsername(event.target.value)}
             />
           </label>
@@ -62,7 +62,7 @@ export function AuthGate() {
               value={password}
               maxLength={72}
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              placeholder={mode === 'register' ? 'at least 8 characters' : ''}
+              placeholder="Password"
               onChange={(event) => setPassword(event.target.value)}
             />
           </label>
